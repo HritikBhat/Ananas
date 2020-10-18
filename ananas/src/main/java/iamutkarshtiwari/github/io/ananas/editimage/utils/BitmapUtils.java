@@ -341,13 +341,31 @@ public class BitmapUtils {
         return resizeBitmap(input, destWidth, destHeight, 0);
     }
 
-    public static Bitmap getSampledBitmap(String filePath, int reqWidth, int reqHeight) {
-        BitmapFactory.Options options = new BitmapFactory.Options();
-        options.inJustDecodeBounds = true;
-        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
-        options.inPreferredConfig = Bitmap.Config.RGB_565;
-        options.inJustDecodeBounds = false;
-        return BitmapFactory.decodeFile(filePath, options);
+    public static Bitmap getSampledBitmap(Context context, String filePath, int reqWidth, int reqHeight) {
+
+        if (Build.VERSION.SDK_INT>=29){
+            Uri uri= Uri.fromFile(new File(filePath));
+            try {
+            ContentResolver contentResolver =context.getContentResolver();
+            ParcelFileDescriptor parcelFileDescriptor= contentResolver.openFileDescriptor(uri, "r");
+            FileDescriptor fileDescriptor= parcelFileDescriptor.getFileDescriptor();
+
+            Bitmap bitmap= BitmapFactory.decodeFileDescriptor(fileDescriptor);
+            parcelFileDescriptor.close();
+            return bitmap;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return null;
+            }
+        }
+        else{
+            BitmapFactory.Options options = new BitmapFactory.Options();
+            options.inJustDecodeBounds = true;
+            options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
+            options.inJustDecodeBounds = false;
+            return BitmapFactory.decodeFile(filePath, options);
+        }
     }
 
 
@@ -373,24 +391,75 @@ public class BitmapUtils {
         return inSampleSize;
     }
 
-    public static boolean saveBitmap(Bitmap bm, String filePath) {
-        File f = new File(filePath);
-        if (f.exists()) {
-            f.delete();
+ 
+    private static String getImageName(String filept){
+        String[] name = filept.split("/");
+        return name[name.length-1];
+    }
+
+    public static boolean saveBitmap(Context context,Bitmap bm, String filePath) {
+        if (Build.VERSION.SDK_INT>=29){
+
+            final ContentValues contentValues = new ContentValues();
+            contentValues.put(MediaStore.MediaColumns.DISPLAY_NAME, getImageName(filePath));
+            contentValues.put(MediaStore.MediaColumns.MIME_TYPE, "image/*");
+            contentValues.put("relative_path", filePath);
+
+            final ContentResolver resolver = context.getContentResolver();
+
+            OutputStream stream = null;
+            Uri uri = null;
+
+            try
+            {
+                final Uri contentUri = MediaStore.Images.Media.EXTERNAL_CONTENT_URI;
+                uri = resolver.insert(contentUri, contentValues);
+
+                if (uri == null)
+                {
+                    throw new IOException("Failed to create new MediaStore record.");
+                }
+
+                stream = resolver.openOutputStream(uri);
+
+                if (stream == null)
+                {
+                    throw new IOException("Failed to get output stream.");
+                }
+
+                if (!bm.compress(CompressFormat.PNG, 95, stream))
+                {
+                    throw new IOException("Failed to save bitmap.");
+                }
+                stream.close();
+                return true;
+            }
+            catch (IOException e)
+            {
+               e.printStackTrace();
+               return false;
+            }
         }
-        try {
-            FileOutputStream out = new FileOutputStream(f);
-            bm.compress(Bitmap.CompressFormat.PNG, 90, out);
-            out.flush();
-            out.close();
-            return true;
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            return false;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
+        else{
+            File f = new File(filePath);
+            if (f.exists()) {
+                f.delete();
+            }
+            try {
+                FileOutputStream out = new FileOutputStream(f);
+                bm.compress(Bitmap.CompressFormat.PNG, 90, out);
+                out.flush();
+                out.close();
+                return true;
+            } catch (FileNotFoundException e) {
+                e.printStackTrace();
+                return false;
+            } catch (IOException e) {
+                e.printStackTrace();
+                return false;
+            }
         }
+
     }
 
 }
