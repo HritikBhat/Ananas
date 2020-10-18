@@ -275,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private Single<Bitmap> loadBitmapFromFile(String filePath) {
         return Single.fromCallable(() ->
-                BitmapUtils.getSampledBitmap(
+                BitmapUtils.getSampledBitmap(this,
                         filePath,
                         imageWidth / 4,
                         imageHeight / 4
