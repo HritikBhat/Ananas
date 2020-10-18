@@ -373,7 +373,7 @@ public class EditImageActivity extends BaseActivity implements OnLoadingDialogLi
             if (TextUtils.isEmpty(outputFilePath))
                 return false;
 
-            return BitmapUtils.saveBitmap(finalBitmap, outputFilePath);
+            return BitmapUtils.saveBitmap(this,finalBitmap, outputFilePath);
         });
     }
 
@@ -391,7 +391,7 @@ public class EditImageActivity extends BaseActivity implements OnLoadingDialogLi
     }
 
     private Single<Bitmap> loadImage(String filePath) {
-        return Single.fromCallable(() -> BitmapUtils.getSampledBitmap(filePath, imageWidth,
+        return Single.fromCallable(() -> BitmapUtils.getSampledBitmap(this,filePath, imageWidth,
                 imageHeight));
     }
 
